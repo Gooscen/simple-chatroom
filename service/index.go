@@ -6,7 +6,7 @@
 package service
 
 import (
-	"ginchat/models"
+	"simple-chatroom/models"
 	"strconv"
 	"text/template"
 
@@ -23,6 +23,7 @@ func GetIndex(c *gin.Context) {
 		panic(err)
 	}
 	ind.Execute(c.Writer, "index")
+
 	// c.JSON(200, gin.H{
 	// 	"message": "welcome !!  ",
 	// })

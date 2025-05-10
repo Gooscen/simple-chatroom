@@ -8,7 +8,7 @@ package mq
 import (
 	"context"
 	"fmt"
-	"ginchat/utils"
+	"simple-chatroom/utils"
 	"testing"
 	"time"
 )

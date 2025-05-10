@@ -7,7 +7,7 @@ package models
 
 import (
 	"fmt"
-	"ginchat/utils"
+	"simple-chatroom/utils"
 
 	"gorm.io/gorm"
 )

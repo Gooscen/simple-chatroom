@@ -6,7 +6,7 @@
 package main
 
 import (
-	"ginchat/models"
+	"simple-chatroom/models"
 
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
