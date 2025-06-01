@@ -105,8 +105,6 @@ func CreateUser(c *gin.Context) {
 func FindUserByNameAndPwd(c *gin.Context) {
 	data := models.UserBasic{}
 
-	//name := c.Query("name")
-	//password := c.Query("password")
 	name := c.Request.FormValue("name")
 	password := c.Request.FormValue("password")
 	fmt.Println(name, password)
@@ -132,10 +130,28 @@ func FindUserByNameAndPwd(c *gin.Context) {
 	pwd := utils.MakePassword(password, user.Salt)
 	data = models.FindUserByNameAndPwd(name, pwd)
 
+	// 生成 JWT token
+	tokenString, err := GenerateJWT(int(data.ID), user.Name, "secretKey")
+	if err != nil {
+		c.JSON(200, gin.H{
+			"code":    -1,
+			"message": "生成token失败",
+			"data":    nil,
+		})
+		return
+	}
+
 	c.JSON(200, gin.H{
 		"code":    0, //  0成功   -1失败
 		"message": "登录成功",
-		"data":    data,
+		"data": gin.H{
+			"token": tokenString,
+			"user": gin.H{
+				"id":       data.ID,
+				"name":     data.Name,
+				"identity": data.Identity,
+			},
+		},
 	})
 }
 

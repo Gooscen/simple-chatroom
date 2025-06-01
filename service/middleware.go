@@ -1,108 +1,103 @@
 package service
 
 import (
+	"fmt"
 	"net/http"
-	"simple-chatroom/models"
-	"simple-chatroom/utils"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 )
 
-var jwtMiddleware *utils.GinJWTMiddleware
-
-// InitJWT 初始化 JWT 中间件
-func InitJWT() {
-	jwtMiddleware = &utils.GinJWTMiddleware{
-		Realm:          "gin jwt",
-		Key:            []byte("your-secret-key"), // 请更改为你的密钥
-		Timeout:        24 * time.Hour,            // token 有效期 24 小时
-		MaxRefresh:     24 * time.Hour,            // 最大刷新时间 24 小时
-		IdentityKey:    "user_id",
-		TokenLookup:    "header: Authorization, query: token, cookie: jwt",
-		TokenHeadName:  "Bearer",
-		TimeFunc:       time.Now,
-		Authenticator:  authenticate,
-		Authorizator:   authorize,
-		Unauthorized:   unauthorized,
-		LoginResponse:  loginResponse,
-		LogoutResponse: logoutResponse,
-	}
-
-	// 初始化中间件
-	_, err := utils.New(jwtMiddleware)
-	if err != nil {
-		panic(err)
-	}
+type UserClaims struct {
+	UserID               int    `json:"user_id"`
+	Username             string `json:"username"`
+	jwt.RegisteredClaims        // v5版本新加的方法
 }
 
-// authenticate 认证用户
-func authenticate(c *gin.Context) (interface{}, error) {
-	var loginReq models.LoginRequest
-	if err := c.ShouldBindJSON(&loginReq); err != nil {
-		return nil, err
+func GenerateJWT(userID int, username, secretKey string) (string, error) {
+	claims := UserClaims{
+		UserID:   userID,
+		Username: username,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)), // 过期时间24小时
+			IssuedAt:  jwt.NewNumericDate(time.Now()),                     // 签发时间
+			NotBefore: jwt.NewNumericDate(time.Now()),                     // 生效时间
+		},
 	}
+	// 使用HS256签名算法
+	t := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	s, err := t.SignedString([]byte(secretKey))
 
-	// 这里应该调用你的用户验证逻辑
-	// 示例中简单判断用户名和密码
-	if loginReq.Username == "admin" && loginReq.Password == "password" {
-		return &models.UserClaims{
-			UserID:   1,
-			Username: loginReq.Username,
-		}, nil
-	}
-
-	return nil, utils.ErrFailedAuthentication
+	return s, err
 }
 
-// authorize 授权用户
-func authorize(data interface{}, c *gin.Context) bool {
-	if _, ok := data.(*models.UserClaims); ok {
-		return true
-	}
-	return false
-}
-
-// unauthorized 未授权处理
-func unauthorized(c *gin.Context, code int, message string) {
-	c.JSON(code, gin.H{
-		"code":    code,
-		"message": message,
+// 解析JWT
+func ParseJwt(tokenstring, secretKey string) (*UserClaims, error) {
+	t, err := jwt.ParseWithClaims(tokenstring, &UserClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(secretKey), nil
 	})
+
+	if claims, ok := t.Claims.(*UserClaims); ok && t.Valid {
+		return claims, nil
+	} else {
+		return nil, fmt.Errorf("invalid token: %w", err)
+	}
 }
 
-// loginResponse 登录响应
-func loginResponse(c *gin.Context, code int, token string, expire time.Time) {
-	c.JSON(http.StatusOK, models.LoginResponse{
-		Token:  token,
-		Expire: expire,
-	})
-}
+func JWTAuthMiddleware() func(c *gin.Context) {
+	return func(c *gin.Context) {
+		// 添加调试信息
+		fmt.Printf("请求路径: %s\n", c.Request.URL.Path)
+		fmt.Printf("请求方法: %s\n", c.Request.Method)
 
-// logoutResponse 登出响应
-func logoutResponse(c *gin.Context, code int) {
-	c.JSON(http.StatusOK, gin.H{
-		"code":    code,
-		"message": "logout success",
-	})
-}
+		//获取到请求头中的token
+		authHeader := c.Request.Header.Get("Authorization")
+		fmt.Printf("Authorization头: %s\n", authHeader)
 
-// JWTAuth JWT 认证中间件
-func JWTAuth() gin.HandlerFunc {
-	return jwtMiddleware.MiddlewareFunc()
-}
+		if authHeader == "" {
+			fmt.Printf("错误: Authorization头为空\n")
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"code": 401,
+				"msg":  "访问失败,请登录!",
+				"data": nil,
+			})
+			c.Abort()
+			return
+		}
 
-// LoginHandler 登录处理
-func LoginHandler(c *gin.Context) {
-	jwtMiddleware.LoginHandler(c)
-}
+		// 按空格分割
+		parts := strings.SplitN(authHeader, " ", 2)
+		if !(len(parts) == 2 && parts[0] == "Bearer") {
+			fmt.Printf("错误: token格式不正确, parts: %v\n", parts)
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"code": 401,
+				"msg":  "访问失败,无效的token格式,请登录!",
+				"data": nil,
+			})
+			c.Abort()
+			return
+		}
 
-// LogoutHandler 登出处理
-func LogoutHandler(c *gin.Context) {
-	jwtMiddleware.LogoutHandler(c)
-}
+		// parts[1]是获取到的tokenString，我们使用之前定义好的解析JWT的函数来解析它
+		fmt.Printf("尝试解析token: %s\n", parts[1])
+		mc, err := ParseJwt(parts[1], "secretKey")
+		if err != nil {
+			fmt.Printf("错误: token解析失败: %v\n", err)
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"code": 401,
+				"msg":  "访问失败,无效的token,请登录!",
+				"data": nil,
+			})
+			c.Abort()
+			return
+		}
 
-// RefreshHandler 刷新 token 处理
-func RefreshHandler(c *gin.Context) {
-	jwtMiddleware.RefreshHandler(c)
+		fmt.Printf("token解析成功, 用户: %s\n", mc.Username)
+		// 将当前请求的userID信息保存到请求的上下文c上
+		c.Set("userID", mc.UserID)
+		c.Set("username", mc.Username)
+		c.Next() // 后续的处理函数可以用过c.Get("username")来获取当前请求的用户信息
+	}
 }

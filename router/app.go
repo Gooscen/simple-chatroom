@@ -15,9 +15,6 @@ import (
 )
 
 func Router() *gin.Engine {
-	// 初始化 JWT
-	service.InitJWT()
-
 	r := gin.Default()
 	//swagger
 	docs.SwaggerInfo.BasePath = ""
@@ -39,25 +36,18 @@ func Router() *gin.Engine {
 		public.GET("/toChat", service.ToChat)
 		public.GET("/chat", service.Chat)
 
-		// 认证相关
-		public.POST("/login", service.LoginHandler)
-		public.POST("/logout", service.LogoutHandler)
-		public.POST("/refresh_token", service.RefreshHandler)
-
 		public.POST("/user/createUser", service.CreateUser)
 		public.POST("/user/findUserByNameAndPwd", service.FindUserByNameAndPwd)
 	}
 
 	// 需要认证的路由
 	auth := r.Group("/")
-	auth.Use(service.JWTAuth())
+	auth.Use(service.JWTAuthMiddleware()) // 使用JWT中间件验证token
 	{
 		//用户模块
 		auth.POST("/user/getUserList", service.GetUserList)
-		//auth.POST("/user/createUser", service.CreateUser)
 		auth.POST("/user/deleteUser", service.DeleteUser)
 		auth.POST("/user/updateUser", service.UpdateUser)
-		//auth.POST("/user/findUserByNameAndPwd", service.FindUserByNameAndPwd)
 		auth.POST("/user/find", service.FindByID)
 		//发送消息
 		auth.GET("/user/sendMsg", service.SendMsg)
@@ -74,8 +64,6 @@ func Router() *gin.Engine {
 		//群列表
 		auth.POST("/contact/loadcommunity", service.LoadCommunity)
 		auth.POST("/contact/joinGroup", service.JoinGroups)
-		//心跳续命 不合适  因为Node  所以前端发过来的消息再receProc里面处理
-		// r.POST("/user/heartbeat", service.Heartbeat)
 		auth.POST("/user/redisMsg", service.RedisMsg)
 	}
 

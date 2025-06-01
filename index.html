@@ -54,9 +54,14 @@
                     if(res.code!=0){
                         mui.toast(res.message)
                     }else{         
-                        var url = "/toChat?userId="+res.data.ID+"&token="+res.data.Identity
-                        userInfo(res.data)
-                        userId(res.data.ID)
+                        // 保存 token 到 localStorage
+                        localStorage.setItem('token', res.data.token)
+                        // 保存用户信息
+                        localStorage.setItem('userInfo', JSON.stringify(res.data.user))
+                        
+                        var url = "/toChat?userId=" + res.data.user.id
+                        userInfo(res.data.user)
+                        userId(res.data.user.id)
                         mui.toast("登录成功,即将跳转")
                         location.href = url
                     }
