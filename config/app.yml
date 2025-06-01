@@ -1,21 +1,20 @@
 mysql:
-  dns: root:ECnCGSyMGYSebCYz@tcp(1.94.54.74:13306)/ginchat_db?charset=utf8mb4&parseTime=True&loc=Local
+  dns: root:12345678@tcp(localhost:3306)/ginchat?charset=utf8mb4&parseTime=True&loc=Local
 redis:
-  addr: "1.94.54.74:26379"
+  addr: "localhost:6379"
   password: ""
   DB: 0
   poolSize: 30
   minIdleConn: 30
 
 timeout:
-  DelayHeartbeat: 3   #延迟心跳时间  单位秒
-  HeartbeatHz: 30   #每隔多少秒心跳时间   
-  HeartbeatMaxTime: 30000  #最大心跳时间  ，超过此就下线 
-  RedisOnlineTime: 4  #缓存的在线用户时长   单位H
+  DelayHeartbeat: 3 #延迟心跳时间  单位秒
+  HeartbeatHz: 30 #每隔多少秒心跳时间
+  HeartbeatMaxTime: 30000 #最大心跳时间  ，超过此就下线
+  RedisOnlineTime: 4 #缓存的在线用户时长   单位H
 
 port:
-  server: 
-    ip: "1.94.54.74"
-    port: "0.0.0.0:8082"
+  server:
+    ip: "0.0.0.0"
+    port: ":8082"
   udp: 3001
-
