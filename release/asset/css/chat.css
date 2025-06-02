@@ -134,7 +134,7 @@ body {
 }
 
 .mui-bar-tab .mui-tab-item.mui-active{
-    color:#fb3a4e;
+    color:#1e90ff;
 }
 .mui-bar-tab .mui-tab-item .mui-icon{
   font-size: 20px;
@@ -199,7 +199,7 @@ body {
 }
 
 .mui-bar-nav a{
-  color:#fb3a4e;
+  color:#1e90ff;
 }
 .main-content{
   padding-top: 0;
@@ -247,5 +247,5 @@ body {
 }
 
 .mui-popup-button{
-  color: #fb3a4e;
+  color: #1e90ff;
 }
