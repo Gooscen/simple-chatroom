@@ -52,54 +52,62 @@
 <script src="/asset/js/util.js" ></script>
 <script>
    function post(uri,data,fn){
-                var xhr = new XMLHttpRequest();
-                xhr.open("POST","//"+location.host+"/"+uri, true);
-                // 添加http头，发送信息至服务器时内容编码类型
-                xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-                // 添加 token 到请求头
-                var token = localStorage.getItem('token');
-                if (token) {
-                    xhr.setRequestHeader("Authorization", "Bearer " + token);
-                }
-                xhr.onreadystatechange = function() {
-                    if (xhr.readyState == 4 && (xhr.status == 200 || xhr.status == 304)) {
-                        fn.call(this, JSON.parse(xhr.responseText));
-                    }
-                };
-                var _data=[];
-                if(!! userId()){
-                   // data["userid"] = userId();
-                }
-                for(var i in data){
-                    _data.push( i +"=" + encodeURI(data[i]));
-                }
-                xhr.send(_data.join("&"));
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST","//"+location.host+"/"+uri, true);
+        // 添加http头，发送信息至服务器时内容编码类型
+        xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+        // 添加 token 到请求头
+        var token = localStorage.getItem('token');
+        console.log("POST请求:", uri, "Token:", token ? "存在" : "不存在");
+        if (token) {
+            xhr.setRequestHeader("Authorization", "Bearer " + token);
+            console.log("已添加Authorization头:", "Bearer " + token.substring(0, 20) + "...");
+        } else {
+            console.log("警告: 没有token，跳过Authorization头");
+        }
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState == 4 && (xhr.status == 200 || xhr.status == 304)) {
+                fn.call(this, JSON.parse(xhr.responseText));
             }
-            function uploadfile(uri,dom,fn){
-                var xhr = new XMLHttpRequest();
-                xhr.open("POST","//"+location.host+"/"+uri, true);
-                // 添加 token 到请求头
-                var token = localStorage.getItem('token');
-                if (token) {
-                    xhr.setRequestHeader("Authorization", "Bearer " + token);
-                }
-                xhr.onreadystatechange = function() {
-                    if (xhr.readyState == 4 && (xhr.status == 200 || xhr.status == 304)) {
-                        fn.call(this, JSON.parse(xhr.responseText));
-                    }
-                };
-                var _data=[];
-                var formdata = new FormData();
-                if(!! userId()){
-                    formdata.append("userid",userId());
-                }
-                formdata.append("file",dom.files[0])
-                xhr.send(formdata);
+        };
+        var _data=[];
+        if(!! userId()){
+            // data["userid"] = userId();
+        }
+        for(var i in data){
+            _data.push( i +"=" + encodeURI(data[i]));
+        }
+        xhr.send(_data.join("&"));
+    }
+    function uploadfile(uri,dom,fn){
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST","//"+location.host+"/"+uri, true);
+        // 添加 token 到请求头
+        var token = localStorage.getItem('token');
+        if (token) {
+            xhr.setRequestHeader("Authorization", "Bearer " + token);
+        }
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState == 4 && (xhr.status == 200 || xhr.status == 304)) {
+                fn.call(this, JSON.parse(xhr.responseText));
             }
+        };
+        var _data=[];
+        var formdata = new FormData();
+        if(!! userId()){
+            formdata.append("userid",userId());
+        }
+        formdata.append("file",dom.files[0])
+        xhr.send(formdata);
+    }
    function uploadblob(uri,blob,filetype,fn){
        var xhr = new XMLHttpRequest();
        xhr.open("POST","//"+location.host+"/"+uri, true);
-       // 添加http头，发送信息至服务器时内容编码类型
+       // 添加 token 到请求头
+       var token = localStorage.getItem('token');
+       if (token) {
+           xhr.setRequestHeader("Authorization", "Bearer " + token);
+       }
        xhr.onreadystatechange = function() {
            if (xhr.readyState == 4 && (xhr.status == 200 || xhr.status == 304)) {
                fn.call(this, JSON.parse(xhr.responseText));
