@@ -1,0 +1,31 @@
+# Go编译文件
+*.exe
+*.so
+*.dylib
+main
+chat-server
+chat.exe
+
+# 依赖文件
+vendor/
+
+# IDE文件
+.vscode/
+.idea/
+
+# 配置文件（包含敏感信息）
+config.yml
+
+# 临时文件
+tmp/
+
+# Mac系统文件
+.DS_Store
+
+# 上传文件目录
+asset/upload/
+asset/attach/
+
+# 构建和发布文件
+release/
+build/ 
