@@ -1,0 +1,215 @@
+{{define "/chat/ai.shtml"}}
+<!-- AI助手主界面 -->
+<div id="tabbar-ai" class="mui-control-content tabbar-ai" v-show="win=='main'">
+    <header class="mui-bar mui-bar-nav">
+        <h1 class="mui-title">AI助手</h1>
+    </header>
+    <ul class="mui-table-view mui-table-view-chevron">
+        <li class="mui-table-view-cell mui-media" @tap="startAiChat()">
+            <a class="">
+                <img class="mui-media-object mui-pull-left avatar ai-main-avatar" src="/asset/images/ai-avatar.png">
+                <div class="mui-media-body">
+                    <span>智能AI助手</span>
+                    <p class='mui-ellipsis'>点击开始与AI助手对话</p>
+                </div>
+            </a>
+        </li>
+    </ul>
+</div>
+
+<!-- AI聊天界面 -->
+<div v-show="win == 'ai-chat'">
+    <header class="mui-bar mui-bar-nav">
+        <a class="mui-icon mui-icon-left-nav mui-pull-left" @tap="win='main'"></a>
+        <h1 class="mui-title">AI助手</h1>
+    </header>
+    <div id="ai-convo" class="mui-content" data-from="AI Assistant">
+        <div class="mui-scroll-wrapper">
+            <div class="mui-scroll">
+                <ul class="chat-thread ai-chat-thread">
+                    <!-- AI消息展示区域 -->
+                    <li class="chat ai-chat" v-for="item in aiMessages" :class="item.isUser ? 'mine' : 'other'">
+                        <div v-if="item.isUser">
+                            <img class="avatar right" :src="info.icon ||'/asset/images/avatar0.png'" />
+                        </div>
+                        <div v-else>
+                            <img class="avatar left ai-avatar" src="/asset/images/ai-avatar.png" />
+                        </div>
+                        <span></span>
+                        <div class="content">
+                            <div v-if="item.isUser" v-text="item.content"></div>
+                            <div v-else class="ai-content" v-html="item.content"></div>
+                        </div>
+                    </li>
+                    <!-- 当AI在思考时显示的loading动画 -->
+                    <li class="chat other ai-thinking" v-if="aiThinking">
+                        <div>
+                            <img class="avatar left ai-avatar" src="/asset/images/ai-avatar.png" />
+                        </div>
+                        <span></span>
+                        <div class="content ai-content">
+                            <div class="ai-message">
+                                <div class="typing-indicator">
+                                    <span></span>
+                                    <span></span>
+                                    <span></span>
+                                </div>
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI聊天输入区域 -->
+    <div class="flex-container main-content">
+        <div class="item-2 ai-input-item">
+            <input placeholder="向AI助手提问..." class="text" type="text" 
+                   v-model="aiInputText" @keyup.enter="sendAiMessage" />
+        </div>
+        <div class="item-4" @tap="sendAiMessage" :class="{'ai-send-active': !!aiInputText}">
+            <i class="iconfont icon-fasong"></i>
+        </div>
+    </div>
+    
+    <!-- AI快捷问题建议（仅在无消息时显示） -->
+    <div class="ai-suggestions" v-if="!aiMessages.length">
+        <div class="suggestion-title">你可以这样问我：</div>
+        <div class="suggestion-items">
+            <div class="suggestion-item" @tap="sendQuickQuestion(item)" v-for="item in quickQuestions">
+                {{"{{"}}item{{"}}"}}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.ai-main-avatar {
+    border-radius: 50%;
+    border: 2px solid #4CAF50;
+}
+
+#ai-convo {
+    position: absolute;
+    top: 44px;
+    bottom: 50px;
+    left: 0;
+    right: 0;
+    overflow: hidden;
+}
+
+#ai-convo .mui-scroll-wrapper {
+    height: 100%;
+    overflow: hidden;
+}
+
+#ai-convo .mui-scroll {
+    height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.ai-chat-thread {
+    padding: 10px;
+    padding-bottom: 80px;
+    min-height: 100%;
+}
+
+.ai-avatar {
+    border-radius: 50%;
+    border: 2px solid #4CAF50;
+}
+
+.ai-content {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 12px 16px;
+    margin: 5px 0;
+    word-wrap: break-word;
+    line-height: 1.4;
+}
+
+.ai-input-item {
+    flex: 1;
+    margin-right: 10px;
+}
+
+.ai-send-active {
+    color: #4CAF50;
+}
+
+.ai-suggestions {
+    position: fixed;
+    bottom: 100px;
+    left: 10px;
+    right: 10px;
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    z-index: 99;
+}
+
+.suggestion-title {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 10px;
+    text-align: center;
+}
+
+.suggestion-items {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.suggestion-item {
+    background: #f8f9fa;
+    padding: 10px 12px;
+    border-radius: 15px;
+    color: #333;
+    cursor: pointer;
+    transition: background 0.3s;
+    font-size: 13px;
+    text-align: center;
+}
+
+.suggestion-item:hover {
+    background: #e9ecef;
+}
+
+.typing-indicator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.typing-indicator span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.7);
+    animation: typing 1.4s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+.typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+
+@keyframes typing {
+    0%, 80%, 100% { 
+        transform: scale(0);
+        opacity: 0.5;
+    } 
+    40% { 
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+.ai-thinking {
+    opacity: 0.8;
+}
+</style>
+{{end}} 

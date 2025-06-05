@@ -38,6 +38,9 @@ func Router() *gin.Engine {
 
 		public.POST("/user/createUser", service.CreateUser)
 		public.POST("/user/findUserByNameAndPwd", service.FindUserByNameAndPwd)
+
+		//AI聊天（公开访问，不需要认证）
+		public.POST("/api/ai/chat", service.HandleAIChat)
 	}
 
 	// 需要认证的路由

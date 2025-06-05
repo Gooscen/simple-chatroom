@@ -47,6 +47,7 @@ func ToChat(c *gin.Context) {
 		"views/chat/tabmenu.html",
 		"views/chat/concat.html",
 		"views/chat/group.html",
+		"views/chat/ai.html",
 		"views/chat/profile.html",
 		"views/chat/createcom.html",
 		"views/chat/userinfo.html",
