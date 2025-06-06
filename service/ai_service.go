@@ -2,7 +2,6 @@ package service
 
 import (
 	"simple-chatroom/models"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -18,13 +17,6 @@ type AIChatResponse struct {
 	Reply string `json:"reply"`
 	Code  int    `json:"code"`
 	Msg   string `json:"msg"`
-}
-
-// AI对话历史响应结构
-type AIChatHistoryResponse struct {
-	History []models.AIChatRecord `json:"history"`
-	Code    int                   `json:"code"`
-	Msg     string                `json:"msg"`
 }
 
 // HandleAIChat 处理AI聊天请求
@@ -46,35 +38,5 @@ func HandleAIChat(c *gin.Context) {
 		Reply: reply,
 		Code:  0,
 		Msg:   "success",
-	})
-}
-
-// HandleAIChatHistory 获取AI对话历史
-func HandleAIChatHistory(c *gin.Context) {
-	userIDStr := c.Query("userId")
-	if userIDStr == "" {
-		c.JSON(400, AIChatHistoryResponse{
-			Code: -1,
-			Msg:  "缺少用户ID参数",
-		})
-		return
-	}
-
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		c.JSON(400, AIChatHistoryResponse{
-			Code: -1,
-			Msg:  "用户ID格式错误",
-		})
-		return
-	}
-
-	// 获取最近20条对话记录
-	history := models.GetAIChatHistory(userID, 0, 19)
-
-	c.JSON(200, AIChatHistoryResponse{
-		History: history,
-		Code:    0,
-		Msg:     "success",
 	})
 }
