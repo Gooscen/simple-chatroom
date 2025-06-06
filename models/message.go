@@ -248,6 +248,8 @@ func sendGroupMsg(targetId int64, msg []byte) {
 		fmt.Println("Redis ZAdd error:", e)
 	} else {
 		fmt.Println("群聊消息已保存到Redis:", ress)
+		// 设置4小时过期时间
+		utils.Red.Expire(ctx, groupKey, 4*time.Hour)
 	}
 
 	// 发送给所有群成员（包括发送者，用于确认消息发送成功）
@@ -332,6 +334,9 @@ func sendMsg(userId int64, msg []byte) {
 	//res, e := utils.Red.Do(ctx, "zadd", key, 1, jsonMsg).Result() //备用 后续拓展 记录完整msg
 	if e != nil {
 		fmt.Println(e)
+	} else {
+		// 设置4小时过期时间
+		utils.Red.Expire(ctx, key, 4*time.Hour)
 	}
 	fmt.Println(ress)
 }
