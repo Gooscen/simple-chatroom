@@ -225,7 +225,6 @@ func getAIResponse(message string) (string, error) {
 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+apiKey)
-	// TODO: 设置超时时间
 	client := &http.Client{Timeout: time.Duration(timeout) * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
