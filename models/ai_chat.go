@@ -79,7 +79,7 @@ func GetAIResponseAndStore(message string, userID int) string {
 	return reply
 }
 
-// GetAIChatHistory 获取用户的AI对话历史
+// GetAIChatHistory 获取用户的AI对话历史（返回结构化数据）
 func GetAIChatHistory(userID int, start, end int64) []AIChatRecord {
 	ctx := context.Background()
 	chatKey := "ai_chat_" + strconv.Itoa(userID)
@@ -102,6 +102,26 @@ func GetAIChatHistory(userID int, start, end int64) []AIChatRecord {
 
 	fmt.Printf("获取用户%d的AI对话历史成功，记录数量: %d\n", userID, len(chatHistory))
 	return chatHistory
+}
+
+// RedisAIMsg 获取AI对话缓存消息（参考message.go的RedisMsg函数）
+func RedisAIMsg(userID int64, start int64, end int64, isRev bool) []string {
+	ctx := context.Background()
+	chatKey := "ai_chat_" + strconv.Itoa(int(userID))
+
+	var rels []string
+	var err error
+	if isRev {
+		rels, err = utils.Red.ZRange(ctx, chatKey, start, end).Result()
+	} else {
+		rels, err = utils.Red.ZRevRange(ctx, chatKey, start, end).Result()
+	}
+	if err != nil {
+		fmt.Println("获取AI对话历史失败:", err)
+	} else {
+		fmt.Printf("获取用户%d的AI对话历史成功，消息数量: %d\n", userID, len(rels))
+	}
+	return rels
 }
 
 // storeAIChatToRedis 将AI对话存储到Redis中

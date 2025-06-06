@@ -256,6 +256,16 @@ func RedisGroupMsg(c *gin.Context) {
 	utils.RespOKList(c.Writer, "ok", res)
 }
 
+// 获取AI对话历史消息
+func RedisAIMsg(c *gin.Context) {
+	userID, _ := strconv.Atoi(c.PostForm("userId"))
+	start, _ := strconv.Atoi(c.PostForm("start"))
+	end, _ := strconv.Atoi(c.PostForm("end"))
+	isRev, _ := strconv.ParseBool(c.PostForm("isRev"))
+	res := models.RedisAIMsg(int64(userID), int64(start), int64(end), isRev)
+	utils.RespOKList(c.Writer, "ok", res)
+}
+
 func MsgHandler(c *gin.Context, ws *websocket.Conn) {
 	for {
 		msg, err := utils.Subscribe(c, utils.PublishKey)

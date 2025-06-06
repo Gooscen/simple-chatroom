@@ -241,7 +241,7 @@
 
                             break;
                         default:
-                            mui.toast("系统暂不支持,请自行扩展")
+                            mui.toast("系统暂不支持,待扩展...")
                     }
                 },
                 reset: function () {
@@ -703,34 +703,134 @@
                 
                 // AI聊天相关方法
                 startAiChat() {
+                    this.start = 0;
+                    this.end = 9;
                     this.win = "ai-chat";
                     this.title = "AI助手";
-                    // 如果是第一次进入，显示欢迎消息
-                    // if (this.aiMessages.length === 0) {
-                    //     this.aiMessages.push({
-                    //         content: "你好！我是AI助手，很高兴为您服务。有什么我可以帮助您的吗？",
-                    //         isUser: false,
-                    //         time: this.formatTime(new Date())
-                    //     });
-                    // }
+                    
+                    if (this.isDisable) {
+                        // 首次读取AI聊天历史记录
+                        const aiKey = 'ai_' + userId();
+                        if (this.isReadRedisMsg.filter(item => item === aiKey).length <= 0) {
+                            post("user/redisAIMsg", { 
+                                userId: userId(), 
+                                start: this.start, 
+                                end: this.end, 
+                                isRev: false 
+                            }, function (res) {
+                                // 循环读取AI对话记录并显示
+                                for (var i in res.Total) {
+                                    try {
+                                        const recordData = JSON.parse(res.Total[i]);
+                                        // 添加用户消息
+                                        this.aiMessages.push({
+                                            content: recordData.user_message,
+                                            isUser: true,
+                                            time: this.formatTime(new Date(recordData.timestamp))
+                                        });
+                                        // 添加AI回复
+                                        this.aiMessages.push({
+                                            content: recordData.ai_reply,
+                                            isUser: false,
+                                            time: this.formatTime(new Date(recordData.timestamp))
+                                        });
+                                    } catch (e) {
+                                        console.error('解析AI对话历史失败:', e);
+                                    }
+                                }
+                                
+                                // 滚动到底部
+                                this.$nextTick(() => {
+                                    this.scrollToBottom();
+                                });
+                            }.bind(this))
+                            this.isReadRedisMsg.push(aiKey);
+                        }
+                        
+                        // 如果是第一次使用且没有历史记录，显示欢迎消息
+                        if (this.aiMessages.length === 0) {
+                            this.aiMessages.push({
+                                content: "你好！我是AI助手，很高兴为您服务。有什么我可以帮助您的吗？",
+                                isUser: false,
+                                time: this.formatTime(new Date())
+                            });
+                        }
+                    }
+                    
                     // 初始化滚动
                     this.$nextTick(() => {
                         this.initAiScrolling();
+                        
+                        // 为AI聊天添加下拉加载更多历史记录
+                        mui('#ai-convo').scroll({
+                            scrollY: true,
+                            scrollX: false,
+                            startX: 0,
+                            startY: 0,
+                            indicators: false,
+                            deceleration: 0.0006,
+                            bounce: true
+                        });
+                        
+                        // 下拉获取更多AI历史消息记录
+                        document.querySelector('#ai-convo .mui-scroll-wrapper').addEventListener('scroll', (e) => {
+                            let translate = e.target.style?.transform?.match(/translate3d\(\d+px,\s*(\d+)px,\s*(\d+)px\)/i);
+                            if (translate && translate.length > 1) {
+                                if (translate[1] > 0 && this.isLoadMore == false) {
+                                    this.isLoadMore = true;
+                                    this.start = this.end + 1;
+                                    this.end = this.end + 2;
+                                    
+                                    post("user/redisAIMsg", { 
+                                        userId: userId(), 
+                                        start: this.start, 
+                                        end: this.end, 
+                                        isRev: false 
+                                    }, function (res) {
+                                        // 循环读取更多AI对话记录
+                                        for (var i in res.Total) {
+                                            try {
+                                                const recordData = JSON.parse(res.Total[i]);
+                                                // 在开头插入历史消息
+                                                this.aiMessages.unshift({
+                                                    content: recordData.ai_reply,
+                                                    isUser: false,
+                                                    time: this.formatTime(new Date(recordData.timestamp))
+                                                });
+                                                this.aiMessages.unshift({
+                                                    content: recordData.user_message,
+                                                    isUser: true,
+                                                    time: this.formatTime(new Date(recordData.timestamp))
+                                                });
+                                            } catch (e) {
+                                                console.error('解析AI对话历史失败:', e);
+                                            }
+                                        }
+                                        setTimeout(() => {
+                                            this.isLoadMore = false;
+                                        }, 300);
+                                    }.bind(this))
+                                }
+                            }
+                        })
+                        
                         this.scrollToBottom();
                     });
                 },
                 
                 initAiScrolling() {
-                    // 为AI聊天界面初始化滚动
-                    mui('#ai-convo').scroll({
-                        scrollY: true,
-                        scrollX: false,
-                        startX: 0,
-                        startY: 0,
-                        indicators: false,
-                        deceleration: 0.0006,
-                        bounce: true
-                    });
+                    // 滚动初始化已经在startAiChat中完成，这里只保留兼容性
+                    if (mui && document.querySelector('#ai-convo')) {
+                        mui('#ai-convo').scroll({
+                            scrollY: true,
+                            scrollX: false,
+                            startX: 0,
+                            startY: 0,
+                            indicators: false,
+                            deceleration: 0.0006,
+                            bounce: true
+                        });
+                    }
                 },
                 
                 sendAiMessage() {

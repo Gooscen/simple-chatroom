@@ -39,8 +39,6 @@ func Router() *gin.Engine {
 		public.POST("/user/createUser", service.CreateUser)
 		public.POST("/user/findUserByNameAndPwd", service.FindUserByNameAndPwd)
 
-		//AI聊天（公开访问，不需要认证）
-		public.POST("/api/ai/chat", service.HandleAIChat)
 	}
 
 	// 需要认证的路由
@@ -69,6 +67,11 @@ func Router() *gin.Engine {
 		auth.POST("/contact/joinGroup", service.JoinGroups)
 		auth.POST("/user/redisMsg", service.RedisMsg)
 		auth.POST("/user/redisGroupMsg", service.RedisGroupMsg)
+
+		auth.POST("/user/redisAIMsg", service.RedisAIMsg)
+
+		//AI聊天
+		auth.POST("/api/ai/chat", service.HandleAIChat)
 	}
 
 	return r
