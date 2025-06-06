@@ -7,13 +7,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"simple-chatroom/config"
 	"simple-chatroom/utils"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/go-redis/redis/v8"
+	"github.com/spf13/viper"
 )
 
 // AI聊天请求结构
@@ -143,17 +143,39 @@ func storeAIChatToRedis(userID int, userMessage, aiReply string) {
 
 // getAIResponse 调用真实的AI API（如OpenAI）
 func getAIResponse(message string) (string, error) {
-	// 从配置文件读取AI配置
-	aiConfig := config.GetAIConfig()
+	// 从viper读取AI配置
+	apiKey := viper.GetString("ai.api_key")
+	provider := viper.GetString("ai.provider")
+	baseURL := viper.GetString("ai.base_url")
+	model := viper.GetString("ai.model")
+	maxTokens := viper.GetInt("ai.max_tokens")
+	timeout := viper.GetInt("ai.timeout")
 
-	if aiConfig.APIKey == "" || aiConfig.APIKey == "your-openai-api-key-here" {
-		// 如果没有配置API Key，返回错误，使用本地回复
-		return "", fmt.Errorf("OpenAI API key not configured in config.yml")
+	// 设置默认值
+	if provider == "" {
+		provider = "deepseek"
+	}
+	if baseURL == "" {
+		baseURL = "https://api.deepseek.com"
+	}
+	if model == "" {
+		model = "deepseek-chat"
+	}
+	if maxTokens == 0 {
+		maxTokens = 150
+	}
+	if timeout == 0 {
+		timeout = 30
 	}
 
-	// 构建OpenAI API请求
+	if apiKey == "" || apiKey == "your-api-key-here" {
+		// 如果没有配置API Key，返回错误，使用本地回复
+		return "", fmt.Errorf("AI API key not configured in config.yml")
+	}
+
+	// 构建AI API请求
 	requestBody := OpenAIRequest{
-		Model: aiConfig.Model,
+		Model: model,
 		Messages: []AIMessage{
 			{
 				Role:    "system",
@@ -164,7 +186,7 @@ func getAIResponse(message string) (string, error) {
 				Content: message,
 			},
 		},
-		MaxTokens: aiConfig.MaxTokens,
+		MaxTokens: maxTokens,
 	}
 
 	jsonData, err := json.Marshal(requestBody)
@@ -173,18 +195,18 @@ func getAIResponse(message string) (string, error) {
 	}
 
 	// 构建请求URL
-	requestURL := fmt.Sprintf("%s/chat/completions", strings.TrimSuffix(aiConfig.BaseURL, "/"))
+	requestURL := fmt.Sprintf("%s/chat/completions", strings.TrimSuffix(baseURL, "/"))
 
-	// 发送请求到OpenAI API
+	// 发送请求到AI API
 	req, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return "", err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+aiConfig.APIKey)
-
-	client := &http.Client{Timeout: config.GetTimeout()}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	// TODO: 设置超时时间
+	client := &http.Client{Timeout: time.Duration(timeout) * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
@@ -197,20 +219,20 @@ func getAIResponse(message string) (string, error) {
 	}
 
 	if resp.StatusCode != 200 {
-		return "", fmt.Errorf("OpenAI API error: %s", string(body))
+		return "", fmt.Errorf("AI API error: %s", string(body))
 	}
 
-	var openAIResp OpenAIResponse
-	err = json.Unmarshal(body, &openAIResp)
+	var aiResp OpenAIResponse
+	err = json.Unmarshal(body, &aiResp)
 	if err != nil {
 		return "", err
 	}
 
-	if len(openAIResp.Choices) > 0 {
-		return openAIResp.Choices[0].Message.Content, nil
+	if len(aiResp.Choices) > 0 {
+		return aiResp.Choices[0].Message.Content, nil
 	}
 
-	return "", fmt.Errorf("no response from OpenAI")
+	return "", fmt.Errorf("no response from AI API")
 }
 
 // getLocalResponse 本地智能回复（作为AI服务的备用方案）
