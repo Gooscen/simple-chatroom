@@ -161,7 +161,10 @@
 
             },
             mounted: function () {
-
+                // 初始化全局滚动
+                this.initGlobalScrolling();
+                // 初始化键盘事件
+                this.initKeyboardEvents();
             },
             methods: {
                 initUser() {
@@ -424,12 +427,52 @@
                 },
                 //群聊的初始化
                 groupmsg: function (group) {
+                    this.start = 0;
+                    this.end = 9;
                     if (this.isDisable) {
+                        // 首次读取群聊消息记录
+                        const groupKey = 'group_' + group.ID;
+                        if (this.isReadRedisMsg.filter(item => item === groupKey).length <= 0) {
+                            post("user/redisGroupMsg", { 
+                                groupId: group.ID, 
+                                start: this.start, 
+                                end: this.end, 
+                                isRev: false 
+                            }, function (res) {
+                                // 循环读取群聊消息记录并显示
+                                for (var i in res.Total) {
+                                    try {
+                                        const msgData = JSON.parse(res.Total[i]);
+                                        // 获取发送者信息
+                                        this.loaduserinfo(msgData.userId, function(user) {
+                                            this.showmsg(user, msgData, false, true);
+                                        }.bind(this));
+                                    } catch (e) {
+                                        console.error('解析群聊消息失败:', e);
+                                    }
+                                }
+                            }.bind(this))
+                            this.isReadRedisMsg.push(groupKey);
+                        }
+
                         this.setTimeFlag()
                         this.win = "group";
                         this.title = group.Name;
                         this.msgcontext.TargetId = parseInt(group.ID);
                         this.msgcontext.Type = 2;
+                        
+                        // 初始化群聊滚动
+                        this.$nextTick(() => {
+                            mui('.mui-scroll-wrapper').scroll({
+                                scrollY: true,
+                                scrollX: false,
+                                startX: 0,
+                                startY: 0,
+                                indicators: true,
+                                deceleration: 0.0006,
+                                bounce: true
+                            });
+                        });
                     }
                 },
                 loaduserinfo: function (userid, cb) {
@@ -663,13 +706,13 @@
                     this.win = "ai-chat";
                     this.title = "AI助手";
                     // 如果是第一次进入，显示欢迎消息
-                    if (this.aiMessages.length === 0) {
-                        this.aiMessages.push({
-                            content: "你好！我是AI助手，很高兴为您服务。有什么我可以帮助您的吗？",
-                            isUser: false,
-                            time: this.formatTime(new Date())
-                        });
-                    }
+                    // if (this.aiMessages.length === 0) {
+                    //     this.aiMessages.push({
+                    //         content: "你好！我是AI助手，很高兴为您服务。有什么我可以帮助您的吗？",
+                    //         isUser: false,
+                    //         time: this.formatTime(new Date())
+                    //     });
+                    // }
                     // 初始化滚动
                     this.$nextTick(() => {
                         this.initAiScrolling();
@@ -835,8 +878,115 @@
                             chatThread.scrollIntoView({ behavior: 'smooth', block: 'end' });
                         }
                     }, 100);
-                }
+                },
+                initGlobalScrolling() {
+                    // 为所有聊天界面启用滚轮滚动
+                    const scrollContainers = [
+                        '#convo',          // 好友聊天
+                        '#ai-convo',       // AI聊天
+                        '.mui-content',    // 主要内容区域
+                        '.mui-scroll-wrapper' // mui滚动容器
+                    ];
 
+                    scrollContainers.forEach(selector => {
+                        const container = document.querySelector(selector);
+                        if (container) {
+                            // 启用原生滚动
+                            container.style.overflowY = 'auto';
+                            container.style.webkitOverflowScrolling = 'touch';
+                            
+                            // 添加滚轮事件监听
+                            container.addEventListener('wheel', (e) => {
+                                e.preventDefault();
+                                container.scrollTop += e.deltaY;
+                            }, { passive: false });
+                        }
+                    });
+
+                    // 为所有页面添加通用滚动支持
+                    document.addEventListener('wheel', (e) => {
+                        // 如果事件已被处理，则跳过
+                        if (e.defaultPrevented) return;
+
+                        // 获取当前活动的滚动容器
+                        const activeScrollContainer = this.getActiveScrollContainer();
+                        if (activeScrollContainer) {
+                            e.preventDefault();
+                            activeScrollContainer.scrollTop += e.deltaY * 0.5; // 减慢滚动速度
+                        }
+                    }, { passive: false });
+                },
+                getActiveScrollContainer() {
+                    // 根据当前窗口状态返回活动的滚动容器
+                    if (this.win === 'single') {
+                        return document.querySelector('#convo .mui-scroll');
+                    } else if (this.win === 'ai-chat') {
+                        return document.querySelector('#ai-convo .mui-scroll');
+                    } else if (this.win === 'group') {
+                        return document.querySelector('#convo .mui-scroll');
+                    }
+                    return document.querySelector('.mui-content');
+                },
+                initKeyboardEvents() {
+                    // 全局键盘事件处理
+                    document.addEventListener('keydown', (e) => {
+                        // 回车键发送消息
+                        if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.altKey) {
+                            const activeInput = document.activeElement;
+                            
+                            // 检查是否在聊天输入框中
+                            if (activeInput && (
+                                activeInput.classList.contains('text') || 
+                                activeInput.id === 'ai-input' ||
+                                (activeInput.tagName === 'INPUT' && activeInput.type === 'text')
+                            )) {
+                                e.preventDefault();
+                                
+                                // 根据当前界面发送消息
+                                if (this.win === 'ai-chat') {
+                                    this.sendAiMessage();
+                                } else if (this.win === 'single' || this.win === 'group') {
+                                    this.sendtxtmsg(this.txtmsg);
+                                }
+                            }
+                        }
+                        
+                        // Escape键返回主界面
+                        else if (e.key === 'Escape') {
+                            if (this.win !== 'main') {
+                                this.win = 'main';
+                            }
+                        }
+                        
+                        // Ctrl+Enter换行（如果需要）
+                        else if (e.key === 'Enter' && e.ctrlKey) {
+                            // 允许换行，不做处理
+                        }
+                    });
+
+                    // 为输入框添加特殊的回车处理
+                    this.$nextTick(() => {
+                        // 普通聊天输入框
+                        const chatInput = document.querySelector('.flex-container input.text');
+                        if (chatInput) {
+                            chatInput.addEventListener('keyup', (e) => {
+                                if (e.key === 'Enter') {
+                                    this.sendtxtmsg(this.txtmsg);
+                                }
+                            });
+                        }
+
+                        // AI聊天输入框
+                        const aiInput = document.querySelector('.ai-input-item input');
+                        if (aiInput) {
+                            aiInput.addEventListener('keyup', (e) => {
+                                if (e.key === 'Enter') {
+                                    this.sendAiMessage();
+                                }
+                            });
+                        }
+                    });
+                }
             },
             watch: {
                 "win": function (n, o) {

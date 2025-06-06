@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
+	"simple-chatroom/config"
 	"strings"
 	"time"
 
@@ -75,23 +75,17 @@ func HandleAIChat(c *gin.Context) {
 
 // getAIResponse 调用真实的AI API（如OpenAI）
 func getAIResponse(message string) (string, error) {
-	// 从环境变量或配置文件读取API Key
-	apiKey := os.Getenv("OPENAI_API_KEY")
+	// 从配置文件读取AI配置
+	aiConfig := config.GetAIConfig()
 
-	// 如果没有设置环境变量，尝试从这里读取（不推荐在生产环境中硬编码）
-	if apiKey == "" {
-		// TODO: 在这里设置您的OpenAI API Key
-		apiKey = "your-openai-api-key-here"
-	}
-
-	if apiKey == "" || apiKey == "your-openai-api-key-here" {
+	if aiConfig.APIKey == "" || aiConfig.APIKey == "your-openai-api-key-here" {
 		// 如果没有配置API Key，返回错误，使用本地回复
-		return "", fmt.Errorf("OpenAI API key not configured")
+		return "", fmt.Errorf("OpenAI API key not configured in config.yml")
 	}
 
 	// 构建OpenAI API请求
 	requestBody := OpenAIRequest{
-		Model: "gpt-3.5-turbo",
+		Model: aiConfig.Model,
 		Messages: []Message{
 			{
 				Role:    "system",
@@ -102,7 +96,7 @@ func getAIResponse(message string) (string, error) {
 				Content: message,
 			},
 		},
-		MaxTokens: 150,
+		MaxTokens: aiConfig.MaxTokens,
 	}
 
 	jsonData, err := json.Marshal(requestBody)
@@ -110,16 +104,19 @@ func getAIResponse(message string) (string, error) {
 		return "", err
 	}
 
+	// 构建请求URL
+	requestURL := fmt.Sprintf("%s/chat/completions", strings.TrimSuffix(aiConfig.BaseURL, "/"))
+
 	// 发送请求到OpenAI API
-	req, err := http.NewRequest("POST", "https://api.openai.com/v1/chat/completions", bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest("POST", requestURL, bytes.NewBuffer(jsonData))
 	if err != nil {
 		return "", err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Authorization", "Bearer "+aiConfig.APIKey)
 
-	client := &http.Client{Timeout: 30 * time.Second}
+	client := &http.Client{Timeout: config.GetTimeout()}
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", err

@@ -221,7 +221,7 @@ func dispatch(data []byte) {
 		fmt.Println("dispatch  data :", string(data))
 		sendMsg(msg.TargetId, data)
 	case 2: //群发
-		sendGroupMsg(msg.TargetId, data) //发送的群ID ，消息内容
+		sendGroupMsg(msg.TargetId, data)
 		// case 4: // 心跳
 		// 	node.Heartbeat()
 		//case 4:
@@ -232,12 +232,46 @@ func dispatch(data []byte) {
 func sendGroupMsg(targetId int64, msg []byte) {
 	fmt.Println("开始群发消息")
 	userIds := SearchUserByGroupId(uint(targetId))
-	for i := 0; i < len(userIds); i++ {
-		//排除给自己的
-		if targetId != int64(userIds[i]) {
-			sendMsg(int64(userIds[i]), msg)
-		}
+	jsonMsg := Message{}
+	json.Unmarshal(msg, &jsonMsg)
 
+	// 保存群聊消息到Redis
+	ctx := context.Background()
+	groupKey := "group_msg_" + strconv.Itoa(int(targetId))
+	res, err := utils.Red.ZRevRange(ctx, groupKey, 0, -1).Result()
+	if err != nil {
+		fmt.Println("Redis ZRevRange error:", err)
+	}
+	score := float64(cap(res)) + 1
+	ress, e := utils.Red.ZAdd(ctx, groupKey, &redis.Z{Score: score, Member: msg}).Result()
+	if e != nil {
+		fmt.Println("Redis ZAdd error:", e)
+	} else {
+		fmt.Println("群聊消息已保存到Redis:", ress)
+	}
+
+	// 发送给所有群成员（包括发送者，用于确认消息发送成功）
+	for i := 0; i < len(userIds); i++ {
+		sendMsgToUser(int64(userIds[i]), msg)
+	}
+}
+
+// 新增：单独发送消息给用户的函数
+func sendMsgToUser(userId int64, msg []byte) {
+	rwLocker.RLock()
+	node, ok := clientMap[userId]
+	rwLocker.RUnlock()
+
+	if ok {
+		fmt.Println("sendMsgToUser >>> userID: ", userId, "  msg:", string(msg))
+		select {
+		case node.DataQueue <- msg:
+			// 消息发送成功
+		default:
+			fmt.Println("用户消息队列已满，消息丢弃")
+		}
+	} else {
+		fmt.Println("用户不在线: ", userId)
 	}
 }
 
@@ -380,4 +414,24 @@ func (node *Node) IsHeartbeatTimeOut(currentTime uint64) (timeout bool) {
 		timeout = true
 	}
 	return
+}
+
+// 获取群聊缓存消息
+func RedisGroupMsg(groupId int64, start int64, end int64, isRev bool) []string {
+	ctx := context.Background()
+	groupKey := "group_msg_" + strconv.Itoa(int(groupId))
+
+	var rels []string
+	var err error
+	if isRev {
+		rels, err = utils.Red.ZRange(ctx, groupKey, start, end).Result()
+	} else {
+		rels, err = utils.Red.ZRevRange(ctx, groupKey, start, end).Result()
+	}
+	if err != nil {
+		fmt.Println("获取群聊历史消息失败:", err)
+	} else {
+		fmt.Println("获取群聊历史消息成功，消息数量:", len(rels))
+	}
+	return rels
 }

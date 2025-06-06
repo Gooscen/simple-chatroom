@@ -68,6 +68,7 @@ func Router() *gin.Engine {
 		auth.POST("/contact/loadcommunity", service.LoadCommunity)
 		auth.POST("/contact/joinGroup", service.JoinGroups)
 		auth.POST("/user/redisMsg", service.RedisMsg)
+		auth.POST("/user/redisGroupMsg", service.RedisGroupMsg)
 	}
 
 	return r

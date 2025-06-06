@@ -108,12 +108,35 @@
     height: 100%;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
 }
 
 .ai-chat-thread {
     padding: 10px;
     padding-bottom: 80px;
     min-height: 100%;
+    width: 100%;
+}
+
+.ai-chat {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 15px;
+    width: 100%;
+}
+
+.ai-chat.other {
+    justify-content: flex-start;
+}
+
+.ai-chat.mine {
+    justify-content: flex-end;
+}
+
+.ai-chat .content {
+    display: block;
+    max-width: 80%;
+    margin: 0 8px;
 }
 
 .ai-avatar {
@@ -128,7 +151,12 @@
     padding: 12px 16px;
     margin: 5px 0;
     word-wrap: break-word;
+    word-break: break-word;
     line-height: 1.4;
+    max-width: 80%;
+    min-width: 120px;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
 }
 
 .ai-input-item {
