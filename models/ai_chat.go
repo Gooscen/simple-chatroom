@@ -2,13 +2,18 @@ package models
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"simple-chatroom/config"
+	"simple-chatroom/utils"
+	"strconv"
 	"strings"
 	"time"
+
+	"github.com/go-redis/redis/v8"
 )
 
 // AI聊天请求结构
@@ -45,6 +50,13 @@ type Choice struct {
 	Message AIMessage `json:"message"`
 }
 
+// AI对话记录结构
+type AIChatRecord struct {
+	UserMessage string    `json:"user_message"`
+	AIReply     string    `json:"ai_reply"`
+	Timestamp   time.Time `json:"timestamp"`
+}
+
 // GetAIResponse 对外提供的AI响应函数
 func GetAIResponse(message string) string {
 	// 首先尝试调用真实的AI API
@@ -54,6 +66,79 @@ func GetAIResponse(message string) string {
 		reply = getLocalResponse(message)
 	}
 	return reply
+}
+
+// GetAIResponseAndStore 获取AI回复并存储到Redis
+func GetAIResponseAndStore(message string, userID int) string {
+	// 获取AI回复
+	reply := GetAIResponse(message)
+
+	// 存储对话到Redis
+	storeAIChatToRedis(userID, message, reply)
+
+	return reply
+}
+
+// GetAIChatHistory 获取用户的AI对话历史
+func GetAIChatHistory(userID int, start, end int64) []AIChatRecord {
+	ctx := context.Background()
+	chatKey := "ai_chat_" + strconv.Itoa(userID)
+
+	// 从Redis获取对话记录（按时间倒序）
+	records, err := utils.Red.ZRevRange(ctx, chatKey, start, end).Result()
+	if err != nil {
+		fmt.Println("获取AI对话历史失败:", err)
+		return []AIChatRecord{}
+	}
+
+	// 解析JSON记录
+	var chatHistory []AIChatRecord
+	for _, recordStr := range records {
+		var record AIChatRecord
+		if err := json.Unmarshal([]byte(recordStr), &record); err == nil {
+			chatHistory = append(chatHistory, record)
+		}
+	}
+
+	fmt.Printf("获取用户%d的AI对话历史成功，记录数量: %d\n", userID, len(chatHistory))
+	return chatHistory
+}
+
+// storeAIChatToRedis 将AI对话存储到Redis中
+func storeAIChatToRedis(userID int, userMessage, aiReply string) {
+	ctx := context.Background()
+	chatKey := "ai_chat_" + strconv.Itoa(userID)
+
+	// 创建对话记录
+	record := AIChatRecord{
+		UserMessage: userMessage,
+		AIReply:     aiReply,
+		Timestamp:   time.Now(),
+	}
+
+	// 序列化为JSON
+	recordJSON, err := json.Marshal(record)
+	if err != nil {
+		fmt.Println("AI对话记录序列化失败:", err)
+		return
+	}
+
+	// 获取当前对话列表长度，用作score
+	res, err := utils.Red.ZRevRange(ctx, chatKey, 0, -1).Result()
+	if err != nil {
+		fmt.Println("Redis ZRevRange error:", err)
+	}
+	score := float64(len(res)) + 1
+
+	// 存储到Redis有序集合
+	_, err = utils.Red.ZAdd(ctx, chatKey, &redis.Z{Score: score, Member: recordJSON}).Result()
+	if err != nil {
+		fmt.Println("AI对话存储到Redis失败:", err)
+	} else {
+		fmt.Printf("AI对话已存储到Redis: 用户%d\n", userID)
+		// 设置3小时过期时间
+		utils.Red.Expire(ctx, chatKey, 3*time.Hour)
+	}
 }
 
 // getAIResponse 调用真实的AI API（如OpenAI）
