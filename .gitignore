@@ -14,7 +14,8 @@ vendor/
 .idea/
 
 # 配置文件（包含敏感信息）
-config.yml
+config/config.yml
+config/app.yml
 
 # 临时文件
 tmp/

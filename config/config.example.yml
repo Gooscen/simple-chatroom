@@ -1,0 +1,45 @@
+# AI聊天室配置文件示例
+# 复制此文件为 config.yml 并填入您的真实配置
+
+# AI服务配置
+ai:
+  # 服务提供商 (openai, azure, claude等)
+  # 如果选择使用deepSeek，具体参考https://api-docs.deepseek.com/
+  provider: "deepSeek"
+
+  # API密钥 - 请填入您的真实API Key
+  api_key: "your-api-key-here"
+
+  # API基础URL
+  base_url: "https://api.deepseek.com"
+
+  # 使用的模型
+  model: "deepSeek-chat"
+
+  # 最大token数量
+  max_tokens: 100
+
+  # 请求超时时间(秒)
+  timeout: 30
+
+# 数据库配置
+mysql:
+  dns:
+redis:
+  addr:
+  password:
+  DB: 0
+  poolSize: 30
+  minIdleConn: 20
+
+timeout:
+  DelayHeartbeat: 3 #延迟心跳时间  单位秒
+  HeartbeatHz: 30 #每隔多少秒心跳时间
+  HeartbeatMaxTime: 30000 #最大心跳时间  ，超过此就下线
+  RedisOnlineTime: 4 #缓存的在线用户时长   单位H
+
+port:
+  server:
+    ip: "localhost"
+    port: "0.0.0.0:8082"
+  udp: 3001
