@@ -131,7 +131,7 @@ func FindUserByNameAndPwd(c *gin.Context) {
 	data = models.FindUserByNameAndPwd(name, pwd)
 
 	// 生成 JWT token
-	tokenString, err := GenerateJWT(int(data.ID), user.Name, "secretKey")
+	tokenString, err := models.GenerateJWT(int(data.ID), user.Name, "secretKey")
 	if err != nil {
 		c.JSON(200, gin.H{
 			"code":    -1,

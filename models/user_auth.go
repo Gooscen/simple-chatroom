@@ -15,7 +15,7 @@ type LoginResponse struct {
 }
 
 // UserClaims JWT 用户信息结构体
-type UserClaims struct {
-	UserID   uint   `json:"user_id"`
-	Username string `json:"username"`
-}
+// type UserClaims struct {
+// 	UserID   uint   `json:"user_id"`
+// 	Username string `json:"username"`
+// }

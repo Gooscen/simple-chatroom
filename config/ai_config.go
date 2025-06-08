@@ -81,23 +81,21 @@ func LoadConfig() (*Config, error) {
 // 从环境变量填充配置
 func fillConfigFromEnv(config *Config) {
 	if config.AI.APIKey == "" || config.AI.APIKey == "your-api-key-here" {
-		if envKey := os.Getenv("OPENAI_API_KEY"); envKey != "" {
-			config.AI.APIKey = envKey
-		} else if envKey := os.Getenv("AI_API_KEY"); envKey != "" {
+		if envKey := os.Getenv("AI_API_KEY"); envKey != "" {
 			config.AI.APIKey = envKey
 		}
 	}
 
 	if config.AI.Provider == "" {
-		config.AI.Provider = getEnvWithDefault("AI_PROVIDER", "openai")
+		config.AI.Provider = os.Getenv("AI_PROVIDER")
 	}
 
 	if config.AI.BaseURL == "" {
-		config.AI.BaseURL = getEnvWithDefault("AI_BASE_URL", "https://api.openai.com/v1")
+		config.AI.BaseURL = os.Getenv("AI_BASE_URL")
 	}
 
 	if config.AI.Model == "" {
-		config.AI.Model = getEnvWithDefault("AI_MODEL", "gpt-3.5-turbo")
+		config.AI.Model = os.Getenv("AI_MODEL")
 	}
 
 	if config.AI.MaxTokens == 0 {

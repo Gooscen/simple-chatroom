@@ -30,19 +30,20 @@ go run main.go
 ```yaml
 ai:
   # 服务提供商 (openai, azure, claude等)
-  provider: "openai"
+  # 如果选择使用deepSeek，具体参考https://api-docs.deepseek.com/
+  provider: "deepSeek"
 
-  # API密钥 - 在这里填入您的真实API Key
-  api_key: "your-openai-api-key-here"
+  # API密钥 - 请填入您的真实API Key
+  api_key: "your-api-key-here"
 
   # API基础URL
-  base_url: "https://api.openai.com/v1"
+  base_url: "https://api.deepseek.com"
 
   # 使用的模型
-  model: "gpt-3.5-turbo"
+  model: "deepSeek-chat"
 
   # 最大token数量
-  max_tokens: 150
+  max_tokens: 100
 
   # 请求超时时间(秒)
   timeout: 30
@@ -64,7 +65,7 @@ database:
 ```yaml
 server:
   host: "localhost"
-  port: 8081
+  port: 8082
   debug: true
 ```
 
@@ -78,13 +79,12 @@ server:
 
 ## 🌍 环境变量支持
 
-即使使用 YAML 配置，您仍然可以通过环境变量覆盖设置：
+即使使用 YAML 配置文件值为空时，可以通过环境变量设置：
 
 ```bash
-export OPENAI_API_KEY="sk-xxxxxxxx..."
 export AI_API_KEY="sk-xxxxxxxx..."
-export AI_PROVIDER="openai"
-export AI_MODEL="gpt-4"
+export AI_PROVIDER="xxxxx"
+export AI_MODEL="xxxxx"
 ```
 
 ## 🔒 安全最佳实践
@@ -96,7 +96,6 @@ export AI_MODEL="gpt-4"
 ```gitignore
 # 配置文件（包含敏感信息）
 config.yml
-config.yaml
 ```
 
 ### 2. 权限设置
@@ -129,39 +128,7 @@ go run main.go
 或者：
 
 ```
-配置加载成功，AI提供商: openai
-```
-
-## 🚀 不同 AI 服务商配置
-
-### OpenAI
-
-```yaml
-ai:
-  provider: "openai"
-  api_key: "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-  base_url: "https://api.openai.com/v1"
-  model: "gpt-3.5-turbo"
-```
-
-### Azure OpenAI
-
-```yaml
-ai:
-  provider: "azure"
-  api_key: "your-azure-api-key"
-  base_url: "https://your-resource.openai.azure.com/"
-  model: "gpt-35-turbo"
-```
-
-### 自定义 API（兼容 OpenAI 格式）
-
-```yaml
-ai:
-  provider: "custom"
-  api_key: "your-custom-api-key"
-  base_url: "https://your-custom-api-endpoint.com/v1"
-  model: "custom-model"
+配置加载成功，AI提供商: xxxxx
 ```
 
 ## 🔧 故障排除
@@ -192,49 +159,10 @@ cp config.example.yml config.yml
 
 ### 问题 3: API Key 无效
 
-**错误信息**: `OpenAI API key not configured in config.yml`
+**错误信息**: `AI API key not configured in config.yml`
 
 **解决方案**:
 
 - 确认 API Key 格式正确（以 sk-开头）
 - 检查 API Key 是否有效且未过期
 - 确认账户余额充足
-
-## 📊 配置监控
-
-### 检查当前配置
-
-启动应用时查看控制台输出，确认配置加载状态。
-
-### API 调用统计
-
-可以在后端添加日志来监控 API 调用：
-
-```go
-fmt.Printf("AI API调用: 模型=%s, Token=%d\n", aiConfig.Model, aiConfig.MaxTokens)
-```
-
-## 🎮 键盘快捷键功能
-
-除了 YAML 配置，我们还增强了用户体验：
-
-### 键盘快捷键
-
-- **Enter**: 发送消息（在任何聊天输入框）
-- **Ctrl+Enter**: 换行（如果需要多行输入）
-- **Escape**: 返回主界面
-
-### 滚动控制
-
-- **鼠标滚轮**: 在所有页面都可以滚动
-- **触摸滚动**: 支持移动设备滑动
-- **自动滚动**: 新消息自动滚动到底部
-
----
-
-现在您的聊天室支持：
-✅ YAML 配置文件管理
-✅ 安全的 API Key 存储
-✅ 鼠标滚轮控制
-✅ 回车键发送消息
-✅ 多种 AI 服务商支持

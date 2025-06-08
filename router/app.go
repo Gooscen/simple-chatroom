@@ -43,7 +43,7 @@ func Router() *gin.Engine {
 
 	// 需要认证的路由
 	auth := r.Group("/")
-	auth.Use(service.JWTAuthMiddleware()) // 使用JWT中间件验证token
+	auth.Use(service.JWTAuth()) // 使用JWT中间件验证token
 	{
 		//用户模块
 		auth.POST("/user/getUserList", service.GetUserList)

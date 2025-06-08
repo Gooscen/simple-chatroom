@@ -21,17 +21,17 @@ import (
 // 消息
 type Message struct {
 	gorm.Model
-	UserId     int64  //发送者
-	TargetId   int64  //接受者
-	Type       int    //发送类型  1私聊  2群聊  3心跳
-	Media      int    //消息类型  1文字 2表情包 3语音 4图片 /表情包
-	Content    string //消息内容
-	CreateTime uint64 //创建时间
-	ReadTime   uint64 //读取时间
-	Pic        string
-	Url        string
-	Desc       string
-	Amount     int //其他数字统计
+	UserId     int64  `json:"UserId"`     //发送者
+	TargetId   int64  `json:"TargetId"`   //接受者
+	Type       int    `json:"Type"`       //发送类型  1私聊  2群聊  3心跳
+	Media      int    `json:"Media"`      //消息类型  1文字 2表情包 3语音 4图片 /表情包
+	Content    string `json:"Content"`    //消息内容
+	CreateTime uint64 `json:"CreateTime"` //创建时间
+	ReadTime   uint64 `json:"ReadTime"`   //读取时间
+	Pic        string `json:"Pic"`
+	Url        string `json:"Url"`
+	Desc       string `json:"Desc"`
+	Amount     int    `json:"Amount"` //其他数字统计
 }
 
 func (table *Message) TableName() string {
@@ -61,18 +61,38 @@ var rwLocker sync.RWMutex
 // 需要 ：发送者ID ，接受者ID ，消息类型，发送的内容，发送类型
 func Chat(writer http.ResponseWriter, request *http.Request) {
 	//1.  获取参数 并 检验 token 等合法性
-	//token := query.Get("token")
 	query := request.URL.Query()
 	Id := query.Get("userId")
+	token := query.Get("token")
 	userId, _ := strconv.ParseInt(Id, 10, 64)
-	//msgType := query.Get("type")
-	//targetId := query.Get("targetId")
-	//	context := query.Get("context")
-	isvalida := true //checkToke()  待.........
+
+	// 直接使用 ParseJwt 进行JWT token验证
+	if token == "" {
+		fmt.Printf("WebSocket连接失败: 用户%d token为空\n", userId)
+		http.Error(writer, "Unauthorized: Missing token", http.StatusUnauthorized)
+		return
+	}
+
+	claims, err := ParseJwt(token, "secretKey")
+	if err != nil {
+		fmt.Printf("WebSocket连接失败: 用户%d JWT解析失败: %v\n", userId, err)
+		http.Error(writer, "Unauthorized: Invalid token", http.StatusUnauthorized)
+		return
+	}
+
+	// 验证用户ID是否匹配
+	if int64(claims.UserID) != userId {
+		fmt.Printf("WebSocket连接失败: 用户ID不匹配, token中的ID=%d, 请求的ID=%d\n", claims.UserID, userId)
+		http.Error(writer, "Unauthorized: User ID mismatch", http.StatusUnauthorized)
+		return
+	}
+
+	fmt.Printf("WebSocket连接成功: 用户=%s, ID=%d\n", claims.Username, claims.UserID)
+
 	conn, err := (&websocket.Upgrader{
 		//token 校验
 		CheckOrigin: func(r *http.Request) bool {
-			return isvalida
+			return true // token已在上面验证过
 		},
 	}).Upgrade(writer, request, nil)
 	if err != nil {
@@ -223,7 +243,7 @@ func dispatch(data []byte) {
 	case 2: //群发
 		sendGroupMsg(msg.TargetId, data)
 		// case 4: // 心跳
-		// 	node.Heartbeat()
+		// node.Heartbeat()
 		//case 4:
 		//
 	}

@@ -82,7 +82,7 @@
                     TargetId: -1,
                     Type: -1,
                     CreateTime: new Date().getTime(),
-                    userId: userId()
+                    UserId: userId()  // 修正为大写U，与后端Message结构一致
                 },
                 plugins: [
                     {
@@ -284,8 +284,14 @@
                     // console.log(">>>>>>>>>>>", msg)
                     var data = {
                     }
-                    data.ismine = userId() == msg.userId;
-                    //console.log(data.ismine,userId(),msg.userid)
+                    // 修正判断逻辑：检查UserId字段，兼容userId字段
+                    data.ismine = userId() == (msg.UserId || msg.userId);
+                    console.log("消息归属判断:", {
+                        currentUserId: userId(),
+                        msgUserId: msg.UserId,
+                        msgUserIdLower: msg.userId,
+                        ismine: data.ismine
+                    });
                     data.user = user;
                     data.msg = msg;
                     console.log(this.msglist)
@@ -443,8 +449,9 @@
                                 for (var i in res.Total) {
                                     try {
                                         const msgData = JSON.parse(res.Total[i]);
-                                        // 获取发送者信息
-                                        this.loaduserinfo(msgData.userId, function(user) {
+                                        // 获取发送者信息 - 兼容UserId和userId字段
+                                        var senderId = msgData.UserId || msgData.userId;
+                                        this.loaduserinfo(senderId, function(user) {
                                             this.showmsg(user, msgData, false, true);
                                         }.bind(this));
                                     } catch (e) {
@@ -489,11 +496,13 @@
                     }
                 },
                 onmessage: function (data) {
-                    this.loaduserinfo(data.userId, function (user) {
+                    // 兼容UserId和userId字段
+                    var senderId = data.UserId || data.userId;
+                    this.loaduserinfo(senderId, function (user) {
 
                         this.showmsg(user, data)
                         this.friends.map((item) => {
-                            if (item.ID == data.userId) {
+                            if (item.ID == senderId) {
                                 // 1文字 2表情包 3图片 4音频
                                 if (data.Media === 1) {
                                     item.memo = data.Content
@@ -511,7 +520,10 @@
 
                 },
                 initwebsocket: function () {
-                    var url = "ws://" + location.host + "/chat?userId=" + userId() + "&token=" + util.parseQuery("token");
+                    // 从localStorage获取token，更安全可靠
+                    var token = localStorage.getItem('token') || util.parseQuery("token");
+                    var url = "ws://" + location.host + "/chat?userId=" + userId() + "&token=" + token;
+                    console.log("WebSocket连接URL:", url.replace(token, "***token***")); // 隐藏token打印
                     this.webSocket = new WebSocket(url);
                     //消息处理
                     this.webSocket.onmessage = function (evt) {
@@ -865,12 +877,24 @@
                 
                 async callAiApi(question) {
                     try {
+                        // 获取token
+                        const token = localStorage.getItem('token');
+                        const headers = {
+                            'Content-Type': 'application/json'
+                        };
+                        
+                        // 添加Authorization头
+                        if (token) {
+                            headers['Authorization'] = 'Bearer ' + token;
+                            console.log('AI API请求已添加Authorization头');
+                        } else {
+                            console.warn('警告: 没有token，AI API请求可能失败');
+                        }
+                        
                         // 调用真实的AI API
                         const response = await fetch('/api/ai/chat', {
                             method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json'
-                            },
+                            headers: headers,
                             body: JSON.stringify({
                                 message: question,
                                 userId: this.info.id || 0
