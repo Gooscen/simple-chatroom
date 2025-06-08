@@ -16,6 +16,7 @@ Simple Chatroom 是一个基于 Go 和 Gin 框架的简单聊天室应用。它�
 
    ```bash
    git clone https://github.com/yourusername/simple-chatroom.git
+
    cd simple-chatroom
    ```
 
